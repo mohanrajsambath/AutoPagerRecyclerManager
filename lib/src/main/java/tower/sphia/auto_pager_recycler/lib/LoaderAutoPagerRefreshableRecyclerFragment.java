@@ -10,13 +10,16 @@ import java.util.List;
 
 /**
  * Created by Voyager on 10/4/2015.
+ * A implementation of AutoPagerRefreshableRecyclerFragment with Loader pattern.
+ * This class is very easy to use, you only need to implement {@link #onCreateLoader(int, Bundle)}
+ * and {@link #onCreateAdapter(AutoPagerRecyclerViewManager)} to make it work.
  */
 public abstract class LoaderAutoPagerRefreshableRecyclerFragment<G extends ElementGroup<E>, E>
         extends AutoPagerRefreshableRecyclerFragment<G, E>
         implements LoaderManager.LoaderCallbacks<List<G>> {
 
 
-    public static final int LOADER_ID = 1;
+    private static final int LOADER_ID = 1;
 
     @Override
     public void loadPage(int page) {
