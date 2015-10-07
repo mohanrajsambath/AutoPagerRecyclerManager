@@ -69,5 +69,6 @@ It's very easy to use `LoaderAutoPagerRefreshableRecyclerFragment` to load multi
 		}
 
 5. All the work is done. Enjoy it!
+
 ## Feel free to pull a request
 This is the first time I release a package, so there may be some problems or bugs. Feel free to tell me what could be done better even a typo!
