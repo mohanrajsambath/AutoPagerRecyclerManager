@@ -35,6 +35,7 @@ public abstract class RefreshableRecyclerFragment extends Fragment {
         return mRecyclerView;
     }
 
+
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -47,13 +48,20 @@ public abstract class RefreshableRecyclerFragment extends Fragment {
         mPullToRefreshLayout = new PullToRefreshLayout(getActivity());
         // trying to solve the bug of progressbar
         mPullToRefreshLayout.addView(mRecyclerView);
+        // When the fragment is restored by a ViewPager, this method is called while the instance is NOT recreated.
+        // if the crossfade animation is setup again but not played, it's difficult to find another timing to play it and show the content,
+        // leaving an empty view on screen while data have already been loaded
         setupEmptyView(inflater, mPullToRefreshLayout);
+        if (!mEmpty) {
+            startCrossfade();
+        }
+    // todo remember the scroll position
         return mPullToRefreshLayout;
     }
 
     protected void setupEmptyView(LayoutInflater inflater, ViewGroup pullToRefreshLayout) {
         View textView = inflater.inflate(R.layout.empty_text, pullToRefreshLayout, false);
-        mCrossfadeManager = CrossfadeManager.setup(pullToRefreshLayout, textView, mRecyclerView);
+        mCrossfadeManager =  CrossfadeManager.setup(pullToRefreshLayout, textView, mRecyclerView);
         ObjectAnimator animator = ObjectAnimator.ofFloat(textView, "alpha", 1f, 0.3f);
         animator.setRepeatCount(ValueAnimator.INFINITE);
         animator.setInterpolator(new CycleInterpolator(2));
@@ -61,8 +69,10 @@ public abstract class RefreshableRecyclerFragment extends Fragment {
         animator.start();
     }
 
+    private boolean mEmpty = true;
     public void startCrossfade() {
         mCrossfadeManager.startAnimation();
+        mEmpty = false;
     }
 
     /**

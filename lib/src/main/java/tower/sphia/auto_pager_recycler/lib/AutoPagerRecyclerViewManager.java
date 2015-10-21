@@ -208,6 +208,9 @@ public class AutoPagerRecyclerViewManager<G extends ElementGroup<E>, E> {
     }
 
     public void removeOnScrollListener() {
+        // the listener must be removed from mRecyclerView and added back later, or it will cause the bug of not listening
+        mRecyclerView.removeOnScrollListener(mOnScrollListener);
+        // set listener to null and instantiate it later, because it's used as a flag
         mOnScrollListener = null;
     }
 
