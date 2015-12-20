@@ -4,7 +4,7 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
+import android.support.v4.content.Loader;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -16,14 +16,16 @@ import uk.co.senab.actionbarpulltorefresh.library.PullToRefreshLayout;
 import uk.co.senab.actionbarpulltorefresh.library.listeners.OnRefreshListener;
 import uk.co.senab.actionbarpulltorefresh.library.viewdelegates.ScrollYDelegate;
 
+import java.util.TreeMap;
+
 /**
- * Created by Voyager on 10/4/2015.
- * A RecyclerFragment with support of PullToRefresh
+ * An implementation of {@link AutoPagerFragment}, on which the feature of PullToRefresh is added.
  */
-public abstract class RefreshableRecyclerFragment extends Fragment {
-    public CrossfadeManager mCrossfadeManager;
+public abstract class AutoPagerRefreshableFragment<P extends Page<E>, E> extends AutoPagerFragment<P, E> {
+    private CrossfadeManager mCrossfadeManager;
     private RecyclerView mRecyclerView;
     private PullToRefreshLayout mPullToRefreshLayout;
+    private boolean mEmpty = true;
 
     public void stopRefreshAnimation() {
         if (mPullToRefreshLayout.isRefreshing()) {
@@ -31,10 +33,10 @@ public abstract class RefreshableRecyclerFragment extends Fragment {
         }
     }
 
+    @Override
     public RecyclerView getRecyclerView() {
         return mRecyclerView;
     }
-
 
     @Nullable
     @Override
@@ -55,13 +57,13 @@ public abstract class RefreshableRecyclerFragment extends Fragment {
         if (!mEmpty) {
             startCrossfade();
         }
-    // todo remember the scroll position
+        // todo remember the scroll position
         return mPullToRefreshLayout;
     }
 
     protected void setupEmptyView(LayoutInflater inflater, ViewGroup pullToRefreshLayout) {
         View textView = inflater.inflate(R.layout.empty_text, pullToRefreshLayout, false);
-        mCrossfadeManager =  CrossfadeManager.setup(pullToRefreshLayout, textView, mRecyclerView);
+        mCrossfadeManager = CrossfadeManager.setup(pullToRefreshLayout, textView, mRecyclerView);
         ObjectAnimator animator = ObjectAnimator.ofFloat(textView, "alpha", 1f, 0.3f);
         animator.setRepeatCount(ValueAnimator.INFINITE);
         animator.setInterpolator(new CycleInterpolator(2));
@@ -69,7 +71,6 @@ public abstract class RefreshableRecyclerFragment extends Fragment {
         animator.start();
     }
 
-    private boolean mEmpty = true;
     public void startCrossfade() {
         mCrossfadeManager.startAnimation();
         mEmpty = false;
@@ -111,20 +112,39 @@ public abstract class RefreshableRecyclerFragment extends Fragment {
                         }
                     }
                 })
-                        // We need to mark the ListView and it's Empty View as pullable
-                        // This is because they are not direct children of the ViewGroup
+                // We need to mark the ListView and it's Empty View as pullable
+                // This is because they are not direct children of the ViewGroup
                 .theseChildrenArePullable(mRecyclerView)
-                        // We can now complete the setup as desired
+                // We can now complete the setup as desired
                 .listener(new OnRefreshListener() {
                     @Override
                     public void onRefreshStarted(View v) {
-                        RefreshableRecyclerFragment.this.onRefreshStarted(v);
+                        AutoPagerRefreshableFragment.this.onRefreshStarted(v);
                     }
                 })
                 .setup(mPullToRefreshLayout);
     }
 
-    protected abstract void onRefreshStarted(View v);
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        getAutoPagerManager().addOnDataAttachedListener(new AutoPagerManager.OnDataAttachedListener() {
+            @Override
+            public void onDataAttached() {
+                startCrossfade();
+            }
+        });
+    }
+
+    protected void onRefreshStarted(View v) {
+        loadPage(getAutoPagerManager().getFirstPageIndex());
+    }
+
+    @Override
+    public void onLoadFinished(Loader<TreeMap<Integer, P>> loader, TreeMap<Integer, P> data) {
+        super.onLoadFinished(loader, data);
+        stopRefreshAnimation();
+    }
 
     /**
      * Add default divider to RecyclerView

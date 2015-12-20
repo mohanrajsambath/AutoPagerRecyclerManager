@@ -4,7 +4,7 @@ import android.content.Context;
 import android.support.v4.content.AsyncTaskLoader;
 
 /**
- * Created by Voyager on 8/18/2015.
+ * A implementation of {@link AsyncTaskLoader} which helps manage and maintain data.
  */
 public abstract class AsyncTaskLoaderImpl<D> extends AsyncTaskLoader<D> {
     // We hold a reference to the Loader’s data here.

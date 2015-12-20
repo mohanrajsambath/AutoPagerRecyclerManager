@@ -3,4 +3,7 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="load_more">tap to load more</string>
+    <string name="loading">loading…</string>
+    <string name="update">tap to check update</string>
 </resources>

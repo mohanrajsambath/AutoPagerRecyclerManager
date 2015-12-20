@@ -4,7 +4,7 @@ Provide auto pager support for a RecycleView, loading data from a multi-page sou
 ## When to use it?
 When you want to use a `RecyclerView` to display data from a multi-page source. 
 
-For example, you are displaying content from a multi-page forum, like www.forum.com/board.json?page=1, www.forum.com/board.json?page=2, www.forum.com/board.json?page=3, and so on. The `AutoPagerRecyclerManager` can handle the async process of loading data of different pages automatically. The data form `page=2` `page=3` or any other pages could be loaded easily on scroll or other custom actions.
+For example, you are displaying content from a multi-page forum, like www.forum.com/board.json?page=1, www.forum.com/board.json?page=2, www.forum.com/board.json?page=3, and so on. The `AutoPagerManager` can handle the async process of loading data of different pages automatically. The data form `page=2` `page=3` or any other pages could be loaded easily on scroll or on other custom actions.
 
 ## Features
 1. Load following pages automatically until data items fill the screen height.
@@ -15,44 +15,52 @@ For example, you are displaying content from a multi-page forum, like www.forum.
 
 
 ## How to use it?
-It's very easy to use `LoaderAutoPagerRefreshableRecyclerFragment` to load data from a multi-page source asynchronously. This fragment is very easy to extend. You only need to implement `onCreateLoader(int, Bundle)` and `onCreateAdapter(AutoPagerRecyclerViewManager)` to make it work. 
+It's very easy to use `AutoPagerFragment` or a refreshable version `AutoPagerRefreshableFragment` to load data from a multi-page source asynchronously. This fragment is very easy to extend. You only need to implement `onCreateLoader(int, Bundle)` and `onCreateAdapter()` to make it work. 
 
-1. Wrapped your content in two custom classes, for example `Group` and `Element`. The `Group` class must implement the `ElementGroup` interface. The `Group` means the data you get for a certain page, which contains a list of `Element`s. For example, the `Group` data is the json you get from www.forum.com/board.json?page=1. It contains a `JsonArray` which stores all its items. These items could be extracted as a list of `Elements`. If there is no parsing work needed, the `Element` could even be a `String`.
+1. Enclosure your content in two custom classes, for example `ForumPage` and `Element`. The `ForumPage` class must implement the `Page<Element>` interface. The `Page` means the data you get for a certain page, which contains a iterable collection of `Element`s. For example, the `Page` data could be the json you get from www.forum.com/board.json?page=1. It contains a `JsonArray` which stores all its items, and they could be accessed by an iterator. These items could be contained in a list/map/set of `Elements`. If there is no parsing work needed, the `Element`  could just simply be a `String`.
 
-		public interface ElementGroup<E> {
-
-			// retrieve all the items
-		    List<E> getElements();
-
-			// an ElementGroup must know its current page index.
-		    int getPageCurrentCount();
-
-			// an ElementGroup must know the all page count. If it's endless just set a large number.
-		    int getPageAllCount();
+	
+		public interface Page<E> extends Iterable<E> {
+		
+		    /**
+		     * @return The index of the first page of the multi-page source. It's usually a constant like 0 or 1.
+		     */
+		    int first();
+		
+		    /**
+		     * @return The index of the current {@link Page} instance.
+		     */
+		    int index();
+		
+		    /**
+		     * @return The index of the last page of the multi-page source. The returned value may vary for different
+		     * {@link Page} instances, because the data source may be updated to get new trailing pages.
+		     */
+		    int last();
 		}
 
 
-2. Create a `Fragment` extending `LoaderAutoPagerRefreshableRecyclerFragment`.
-3. Implement `onCreateLoader()` with an `AutoPagerLoader`. You only need to tell it how to get data for a certain page in `newGroup` method, which will be executed at background.
+2. Create a `Fragment` extending `AutoPagerFragment` or `AutoPagerRefreshableFragment`.
+3. Implement `onCreateLoader()` with an `AutoPagerLoader`. You only need to tell it how to get data for a certain page in `newPage` method, which will be executed at background.
 
 		@Override
-		public Loader<List<Group>> onCreateLoader(int id, Bundle args) {
-		    return new AutoPagerLoader<Group>(getActivity()) {
+		public Loader<TreeMap<Integer, ForumPage>> onCreateLoader(int id, Bundle args) {
+		    return new AutoPagerLoader<ForumPage>(getActivity()) {
 		        @Override
-		        protected Group newGroup(int page) throws Exception {
+		        protected Page newPage(int page) throws DataNotLoadedException {
 					String response = getDataFromServer(page);
-					Group group = parseString(response);
-		            return group;
+					ForumPage page = parseString(response);
+		            return page;
 		        }
 		    };
 		} 
 
-4. Implement `onCreateAdapter()` with an `AutoPagerRecyclerAdapter`. It's just like implementing a normal `RecyclerView.Adapter` to provide an adapter from data to view.
+4. Implement `onCreateAdapter()` with an `AutoPagerAdapter`. It's just like implementing a normal `RecyclerView.Adapter` to provide an adapter from data to view.
 
-		private class GroupAdapter extends AutoPagerRecyclerAdapter<Group, String> {
+		private class ForumPageAdapter extends AutoPagerAdapter<ForumPage, String> {
 		
-		    public GroupAdapter(AutoPagerRecyclerViewManager<Group, String> autoPagerRecyclerViewManager) {
-		        super(autoPagerRecyclerViewManager);
+		    public ForumPageAdapter() {
+		        super();
 		    }
 		
 		    @Override
@@ -67,8 +75,8 @@ It's very easy to use `LoaderAutoPagerRefreshableRecyclerFragment` to load data 
 		}
 
 		@Override
-		protected AutoPagerRecyclerAdapter<Group, String> onCreateAdapter(AutoPagerRecyclerViewManager<Group, String> viewManager) {
-		    return new GroupAdapter(viewManager);
+		protected AutoPagerRecyclerAdapter<ForumPage, String> onCreateAdapter() {
+		    return new ForumPageAdapter();
 		}
 
 5. Add your fragment to an `Activity`. 
@@ -91,13 +99,15 @@ For gradle users, you only need to modify these configuration files:
 
 
 ## The hierarchy
-The package provides 3 components of different hierarchies to support the auto pager function.
-#### AutoPagerRecyclerViewManager
+The package provides 4 components of different hierarchies to support the auto pager function.
+#### AutoPagerManager
 This manager wraps a `RecyclerView` and its corresponding `Adapter`. It's the main part of the package, providing all the auto pager function.
-#### AutoPagerRefreshableRecyclerFragment
-This fragment is a default implementation of the `AutoPagerRecyclerViewManager`. It also provide PullToRefresh functions. Using this fragment is very easy, and you only need to implement how to get the data from source whether sync or async.
-#### LoaderAutoPagerRefreshableRecyclerFragment
+#### BaseAutoPagerFragment
+This fragment is a default implementation of the `AutoPagerManager`. Using this fragment is very easy, and you only need to implement how to get the data from source whether sync or async.
+#### AutoPagerFragment
 **Loading data from a multi-page source has never been so easy** using the fragment. This fragment is based on loader pattern of Android, so **what you need to do is** just providing the parsing function to convert the address of the source to a `ElementGroup` implementation, and an adapter specifying how to display the items. **Then all the paging and refreshing work will all be handled automatically, even across a configuration change!**
+#### AutoPagerRefreshableFragment
+A refreshable version of `AutoPagerFragment`. You can substitute the implementation of `PullToRefresh` feature into whatever you like by extending `AutoPagerFragment`.
 
 ## Help me make it better
 This is the first time I release a package, so there may be some problems or bugs. Feel free to tell me what could be done better even for a typo!

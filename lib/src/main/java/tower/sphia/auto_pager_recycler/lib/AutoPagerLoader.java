@@ -1,72 +1,74 @@
 package tower.sphia.auto_pager_recycler.lib;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
+import android.util.Log;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.TreeMap;
 
 /**
- * Created by Voyager on 8/22/2015.
+ * A loader which loads the target page and maintains all loaded data.
  */
- public abstract class AutoPagerLoader<D extends ElementGroup<?>> extends AsyncTaskLoaderImpl<List<D>> {
-    private int mTargetPage = 1;
+public abstract class AutoPagerLoader<P extends Page<?>> extends AsyncTaskLoaderImpl<TreeMap<Integer, P>> {
+    private static final String TAG = "AutoPagerLoader";
+    /**
+     * tell the loader to target page to load
+     * the loaded target page will be stored in the {@link TreeMap} container
+     */
+    private int mTargetPage = -1;
 
     public AutoPagerLoader(Context ctx) {
         super(ctx);
     }
 
     @Override
-    protected void releaseResources(List<D> data) {
-
+    protected void releaseResources(TreeMap<Integer, P> data) {
     }
-
-    public AutoPagerLoader<D> setTargetPage(int page) {
-        mTargetPage = page;
-        return this;
-    }
-
 
     /**
-     * create group instance from string,
+     * Implement this method to get a page object of a certain index (from network, database etc.)
      *
-     * @param page the page to be loaded
-     * @return the object instance for the page
+     * @param index the index to be loaded
+     * @return the object instance for the index
      */
-    protected abstract D newGroup(int page) throws Exception;
+    @NonNull
+    protected abstract P newPage(int index) throws DataNotLoadedException;
 
     @Override
-    public List<D> loadInBackground() {
+    public TreeMap<Integer, P> loadInBackground() {
         // This method is called on a background thread and should generate a
-        // new set of data to be delivered back to the client.
-        List<D> data = new ArrayList<>();
-        // TODO: Perform the query here and add the results to 'data'.
-        if (mTargetPage == 1) {
-            try {
-                data.add(newGroup(1));
-            } catch (Exception e) {
-                e.printStackTrace();
-                return data;
-            }
-            return data;
-        } else {
-            data.addAll(getData());
-            try {
-                D newGroup = newGroup(mTargetPage);
-                for (int i = data.size() - 1; i >= 0; i--) {
-                    if (newGroup.getPageCurrentCount() > data.get(i).getPageCurrentCount()) {
-                        data.add(i + 1, newGroup);
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                return data;
-            }
-            return data;
+        // new set of pages to be delivered back to the client.
+
+        // MUST create new TreeMap here, cuz LoaderManager will use `oldData!=newReturned`
+        // to decide whether to call `onLoadFinished()` or not.
+
+        TreeMap<Integer, P> pages = new TreeMap<>();
+
+        TreeMap<Integer, P> oldData = getData();
+        if (oldData != null) {
+            pages.putAll(oldData);
         }
+
+        try {
+            P page = newPage(mTargetPage);
+            if (mTargetPage == page.first()) {
+                // case for reloading all
+                if (pages.containsKey(mTargetPage)) {
+                    pages.clear();
+                    if (AutoPagerManager.DEBUG) Log.d(TAG, "RELOADING");
+                }
+            }
+            pages.put(page.index(), page);
+            if (AutoPagerManager.DEBUG) Log.d(TAG, "loadInBackground mTargetPage " + mTargetPage);
+        } catch (DataNotLoadedException e) {
+            if (AutoPagerManager.DEBUG) Log.e(TAG, "loadInBackground Page " + mTargetPage + "not found");
+        }
+        if (AutoPagerManager.DEBUG) Log.d(TAG, "loadInBackground() returned pages.size() " + pages.size());
+        return pages;
     }
 
-    public int getTargetPage() {
-        return mTargetPage;
+    public AutoPagerLoader<P> setTargetPage(int page) {
+        mTargetPage = page;
+        return this;
     }
 }

@@ -8,6 +8,6 @@
     <ProgressBar android:layout_width="0dp" android:layout_weight="1" android:gravity="center_vertical" android:layout_height="30dp"/>
     <TextView android:layout_width="0dp"  android:gravity="center_vertical"
               android:textAppearance="?android:attr/textAppearanceMedium"
-              android:layout_height="match_parent" android:layout_weight="1" android:text="loading..."/>
+              android:layout_height="match_parent" android:layout_weight="1" android:text="@string/loading"/>
 
 </LinearLayout>
