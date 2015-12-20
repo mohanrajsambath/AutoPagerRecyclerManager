@@ -12,6 +12,7 @@ For example, you are displaying content from a multi-page forum, like www.forum.
 3. Provide an empty view and a simple crossfade animation by default.
 4. Provide an interface to load any specified page you want.
 5. **Provide a Loader-based Fragment implementation which work harmoniously with the  Activity lifecycle.**
+6. No need to save data or handle configuration changes, because all work is done by the Loader.
 
 
 ## How to use it?
@@ -21,21 +22,17 @@ It's very easy to use `AutoPagerFragment` or a refreshable version `AutoPagerRef
 
 	
 		public interface Page<E> extends Iterable<E> {
-		
-		    /**
-		     * @return The index of the first page of the multi-page source. It's usually a constant like 0 or 1.
-		     */
+		    
+		    // return the index of the first page of the multi-page source. 
+			// It's usually a constant like 0 or 1.
 		    int first();
 		
-		    /**
-		     * @return The index of the current {@link Page} instance.
-		     */
+		    
+		    // return the index of the current Page instance.
 		    int index();
 		
-		    /**
-		     * @return The index of the last page of the multi-page source. The returned value may vary for different
-		     * {@link Page} instances, because the data source may be updated to get new trailing pages.
-		     */
+		    
+		    // return the index of the last page of the multi-page source. 
 		    int last();
 		}
 
@@ -99,7 +96,7 @@ For gradle users, you only need to modify these configuration files:
 
 
 ## The hierarchy
-The package provides 4 components of different hierarchies to support the auto pager function.
+The package provides 4 components of different hierarchies for you to custom the implementation.
 #### AutoPagerManager
 This manager wraps a `RecyclerView` and its corresponding `Adapter`. It's the main part of the package, providing all the auto pager function.
 #### BaseAutoPagerFragment
