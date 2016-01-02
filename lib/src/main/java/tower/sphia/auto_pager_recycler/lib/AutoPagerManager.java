@@ -27,7 +27,7 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
      */
     public static final int AUTO_PAGER_ZONE_SIZE = 3;
     private static final String TAG = "AutoPagerManager";
-    static boolean DEBUG = false;
+    public static boolean DEBUG = false;
     /**
      * A flag whether next page loading has been started
      */
@@ -63,7 +63,6 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
     private List<OnDataAttachedListener> mOnDataAttachedListeners = new ArrayList<>();
     private LoadPageMethod mLoadPageMethod;
     private EndViewManager mEndViewManager;
-    private int mFirstPageIndex;
 
     /**
      * The constructor.
@@ -144,12 +143,11 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
             mIndex = last.index();
             // check if first page have been loaded, if not, do some initialization work
             if (mLastPageIndex == -1) {
-                mFirstPageIndex = last.first();
-                mLastPageIndex = last.last();
                 for (OnDataAttachedListener onDataAttachedListener : mOnDataAttachedListeners) {
                     onDataAttachedListener.onDataAttached();
                 }
             }
+            mLastPageIndex = last.last();
         }
         mAdapter.setInLastPage(inLastPage());
         mAdapter.setItems(pages);
@@ -181,7 +179,7 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
                 if (DEBUG) Log.d(TAG, "visibleItemCount = " + visibleItemCount);
                 if (DEBUG) Log.d(TAG, "totalItemCount = " + totalItemCount);
 
-                if (visibleItemCount != 0 && totalItemCount > visibleItemCount + 1) {
+                if (visibleItemCount != 0 && totalItemCount > visibleItemCount + 3) {
                     // if data have filled screen, enable scrolling features
                     mOnScrollListener = new AutoPagerOnScrollListener();
                     mRecyclerView.addOnScrollListener(mOnScrollListener);
@@ -234,9 +232,6 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
         mOnScrollListener = null;
     }
 
-    public int getFirstPageIndex() {
-        return mFirstPageIndex;
-    }
 
     /**
      * A listener for the event of getting first group of data, which could be used to handle the animation of the empty view
@@ -249,6 +244,9 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
      * The function interface which provide a function to load a certain page sync/async
      */
     public interface LoadPageMethod {
+        /**
+         * @param page The first page is always 1. So you should add a offset if your page doesn't starts with 1.
+         */
         void loadPage(int page);
     }
 

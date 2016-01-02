@@ -23,12 +23,8 @@ It's very easy to use `AutoPagerFragment` or a refreshable version `AutoPagerRef
 	
 		public interface Page<E> extends Iterable<E> {
 		    
-		    // return the index of the first page of the multi-page source. 
-			// It's usually a constant like 0 or 1.
-		    int first();
-		
-		    
 		    // return the index of the current Page instance.
+            // note that the index of the first page should be 1.
 		    int index();
 		
 		    

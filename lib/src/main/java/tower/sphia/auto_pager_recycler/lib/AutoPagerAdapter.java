@@ -88,17 +88,17 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
         if (AutoPagerManager.DEBUG) Log.d(TAG, "setItems() called with " + "pages.size() = [" + pages.size() + "]");
         mItems.clear();
         mLoadMorePositionPageMap.clear();
-        int lastIndex = -1;
+        int prev = -1;
         for (Map.Entry<Integer, P> entry : pages.entrySet()) {
             Page<E> page = entry.getValue();
             int index = page.index();
 
-            if (lastIndex != -1) {
-                if (index != lastIndex + 1) {
+            if (prev != -1) {
+                if (index != prev + 1) {
                     mLoadMorePositionPageMap.put(mItems.size(), index - 1);
                 }
             }
-            lastIndex = index;
+            prev = index;
             for (E e : page) {
                 mItems.add(e);
             }

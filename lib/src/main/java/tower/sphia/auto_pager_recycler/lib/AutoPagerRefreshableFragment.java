@@ -137,7 +137,8 @@ public abstract class AutoPagerRefreshableFragment<P extends Page<E>, E> extends
     }
 
     protected void onRefreshStarted(View v) {
-        loadPage(getAutoPagerManager().getFirstPageIndex());
+        loadPage(1);
+//        loadPage(getAutoPagerLoader().firstPage());
     }
 
     @Override

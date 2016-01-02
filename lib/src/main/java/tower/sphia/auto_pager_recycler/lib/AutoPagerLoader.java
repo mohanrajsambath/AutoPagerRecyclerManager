@@ -14,8 +14,10 @@ public abstract class AutoPagerLoader<P extends Page<?>> extends AsyncTaskLoader
     /**
      * tell the loader to target page to load
      * the loaded target page will be stored in the {@link TreeMap} container
+     *
+     * NOTE: the default index of first page is 1, if your page begins with 0, just make a offset in {@link #newPage(int)}
      */
-    private int mTargetPage = -1;
+    private int mTargetPage = 1;
 
     public AutoPagerLoader(Context ctx) {
         super(ctx);
@@ -27,6 +29,7 @@ public abstract class AutoPagerLoader<P extends Page<?>> extends AsyncTaskLoader
 
     /**
      * Implement this method to get a page object of a certain index (from network, database etc.)
+     * The index of first page should be moved to 1
      *
      * @param index the index to be loaded
      * @return the object instance for the index
@@ -51,7 +54,8 @@ public abstract class AutoPagerLoader<P extends Page<?>> extends AsyncTaskLoader
 
         try {
             P page = newPage(mTargetPage);
-            if (mTargetPage == page.first()) {
+
+            if (mTargetPage == 1) {
                 // case for reloading all
                 if (pages.containsKey(mTargetPage)) {
                     pages.clear();
