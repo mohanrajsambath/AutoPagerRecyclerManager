@@ -120,6 +120,7 @@ public abstract class AutoPagerRefreshableFragment<P extends Page<E>, E> extends
                     @Override
                     public void onRefreshStarted(View v) {
                         AutoPagerRefreshableFragment.this.onRefreshStarted(v);
+                        getAutoPagerManager().removeOnScrollListener();
                     }
                 })
                 .setup(mPullToRefreshLayout);
