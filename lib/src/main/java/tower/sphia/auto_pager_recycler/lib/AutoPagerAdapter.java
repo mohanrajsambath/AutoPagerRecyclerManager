@@ -19,25 +19,16 @@ import java.util.TreeMap;
 public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     protected static final int TYPE_ITEM = 1;
     protected static final int TYPE_FOOTER = 2;
-
     protected static final int TYPE_PLACEHOLDER_UP = 3;
     protected static final int TYPE_END = 4;
     private static final String TAG = "AutoPagerAdapter";
+    public static boolean DEBUG = false;
     private List<E> mItems = new ArrayList<>();
     private Map<Integer, Integer> mLoadMorePositionPageMap = new TreeMap<>();
     private int mFooterRes;
     private int mEnderRes;
     private int mLoaderRes;
     private boolean mInLastPage = false;
-
-    public AdapterCallbacks getCallbacks() {
-        return mCallbacks;
-    }
-
-    public void setCallbacks(AdapterCallbacks callbacks) {
-        mCallbacks = callbacks;
-    }
-
     private AdapterCallbacks mCallbacks;
 
     public AutoPagerAdapter(AdapterCallbacks callbacks) {
@@ -51,17 +42,13 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
         mLoaderRes = R.layout.item_load_more;
     }
 
-    /**
-     * The callback listeners for the special items
-     */
-    public interface AdapterCallbacks {
-        void onClickFooter(View view);
-
-        void onClickLoadMore(View view);
-
-        void onClickEnding(View view);
+    public AdapterCallbacks getCallbacks() {
+        return mCallbacks;
     }
 
+    public void setCallbacks(AdapterCallbacks callbacks) {
+        mCallbacks = callbacks;
+    }
 
     public Map<Integer, Integer> getLoadMorePositionPageMap() {
         return mLoadMorePositionPageMap;
@@ -85,7 +72,7 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
      * @param pages the data of all pages that have been loaded
      */
     public void setItems(TreeMap<Integer, P> pages) {
-        if (AutoPagerManager.DEBUG) Log.d(TAG, "setItems() called with " + "pages.size() = [" + pages.size() + "]");
+        if (DEBUG) Log.d(TAG, "setItems() called with " + "pages.size() = [" + pages.size() + "]");
         mItems.clear();
         mLoadMorePositionPageMap.clear();
         int prev = -1;
@@ -103,7 +90,7 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
                 mItems.add(e);
             }
         }
-        if (AutoPagerManager.DEBUG) Log.i(TAG, "setItems " + mItems.size());
+        if (DEBUG) Log.i(TAG, "setItems " + mItems.size());
         notifyDataSetChanged();
     }
 
@@ -138,10 +125,9 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
         return mItems.get(i - getOffset(i));
     }
 
-
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
-        if (AutoPagerManager.DEBUG) Log.i("LoadMore", "RecyclerWithFooterAdapter.onCreateViewHolder");
+        if (DEBUG) Log.d("LoadMore", "RecyclerWithFooterAdapter.onCreateViewHolder");
         switch (viewType) {
             case TYPE_ITEM:
                 return onCreateItemViewHolder(viewGroup, viewType);
@@ -181,7 +167,7 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
 
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder viewHolder, int position) {
-        if (AutoPagerManager.DEBUG)
+        if (DEBUG)
             Log.i("LoadMore", "RecyclerWithFooterAdapter.onBindViewHolder " + position);
         if (viewHolder instanceof FooterViewHolder) {
 //            FooterViewHolder holder = ((FooterViewHolder) viewHolder);
@@ -190,10 +176,10 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
 //                // todo maybe it's useless
 //            }
         } else if (viewHolder instanceof PlaceHolderViewHolder) {
-            if (AutoPagerManager.DEBUG) Log.v("LoadMore", "" + position);
+            if (DEBUG) Log.v("LoadMore", "" + position);
             ((PlaceHolderViewHolder) viewHolder).textView.setText("Click me to load more");
         } else if (viewHolder instanceof EndViewHolder) {
-            if (AutoPagerManager.DEBUG) Log.v("End", "" + position);
+            if (DEBUG) Log.v("End", "" + position);
         } else {
             onBindItemViewHolder(viewHolder, position);
         }
@@ -217,6 +203,17 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
 
     public void setInLastPage(boolean inLastPage) {
         this.mInLastPage = inLastPage;
+    }
+
+    /**
+     * The callback listeners for the special items
+     */
+    public interface AdapterCallbacks {
+        void onClickFooter(View view);
+
+        void onClickLoadMore(View view);
+
+        void onClickEnding(View view);
     }
 
     private static class FooterViewHolder extends RecyclerView.ViewHolder {

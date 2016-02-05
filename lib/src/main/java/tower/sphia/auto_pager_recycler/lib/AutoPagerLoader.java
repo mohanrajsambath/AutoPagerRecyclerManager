@@ -11,10 +11,13 @@ import java.util.TreeMap;
  */
 public abstract class AutoPagerLoader<P extends Page<?>> extends AsyncTaskLoaderImpl<TreeMap<Integer, P>> {
     private static final String TAG = "AutoPagerLoader";
+    private final Lock mLock = Lock.locked();
+
+
     /**
      * tell the loader to target page to load
      * the loaded target page will be stored in the {@link TreeMap} container
-     *
+     * <p/>
      * NOTE: the default index of first page is 1, if your page begins with 0, just make a offset in {@link #newPage(int)}
      */
     private int mTargetPage = 1;
@@ -38,13 +41,18 @@ public abstract class AutoPagerLoader<P extends Page<?>> extends AsyncTaskLoader
     protected abstract P newPage(int index) throws DataNotLoadedException;
 
     @Override
-    public TreeMap<Integer, P> loadInBackground() {
+    public synchronized TreeMap<Integer, P> loadInBackground() {
         // This method is called on a background thread and should generate a
         // new set of pages to be delivered back to the client.
+        if (AutoPagerManager.DEBUG) Log.d(TAG, "loadInBackground called with mTargetPage=" + mTargetPage);
+
+        if (!mLock.check()) {
+            throw new IllegalStateException(mLock.TAG + " is unlocked!");
+//            mLock.lock();
+        }
 
         // MUST create new TreeMap here, cuz LoaderManager will use `oldData!=newReturned`
         // to decide whether to call `onLoadFinished()` or not.
-
         TreeMap<Integer, P> pages = new TreeMap<>();
 
         TreeMap<Integer, P> oldData = getData();
@@ -55,15 +63,12 @@ public abstract class AutoPagerLoader<P extends Page<?>> extends AsyncTaskLoader
         try {
             P page = newPage(mTargetPage);
 
-            if (mTargetPage == 1) {
-                // case for reloading all
-                if (pages.containsKey(mTargetPage)) {
-                    pages.clear();
-                    if (AutoPagerManager.DEBUG) Log.d(TAG, "RELOADING");
-                }
+            if (mTargetPage == 1 && pages.containsKey(mTargetPage)) {
+                pages.clear();
+                if (AutoPagerManager.DEBUG) Log.d(TAG, "RELOADING");
             }
             pages.put(page.index(), page);
-            if (AutoPagerManager.DEBUG) Log.d(TAG, "loadInBackground mTargetPage " + mTargetPage);
+            if (AutoPagerManager.DEBUG) Log.d(TAG, "mTargetPage " + mTargetPage + " loaded");
         } catch (DataNotLoadedException e) {
             if (AutoPagerManager.DEBUG) Log.e(TAG, "loadInBackground Page " + mTargetPage + "not found");
         }
@@ -71,8 +76,73 @@ public abstract class AutoPagerLoader<P extends Page<?>> extends AsyncTaskLoader
         return pages;
     }
 
-    public AutoPagerLoader<P> setTargetPage(int page) {
+    public synchronized void load(int page) {
+        if (AutoPagerManager.DEBUG) Log.d(TAG, "load() called with " + "page = [" + page + "]");
+        if (mLock.check()) {
+            if (AutoPagerManager.DEBUG) mLock.log();
+        } else {
+            mLock.lock();
+            setTargetPage(page);
+            onContentChanged();
+        }
+    }
+
+    private void setTargetPage(int page) {
+        if (AutoPagerManager.DEBUG) {
+            Log.d(TAG, "*******************************");
+            Log.d(TAG, "setTargetPage() called with " + "page = [" + page + "]");
+        }
         mTargetPage = page;
-        return this;
+    }
+
+    public synchronized void releaseLock() {
+        if (mLock.check()) {
+            mLock.release();
+        }
+    }
+
+    private static class Lock {
+        public final String TAG = "Lock#" + this.hashCode();
+        private boolean locked = false;
+
+        private Lock() {
+
+        }
+
+        public static Lock unlocked() {
+            return new Lock();
+        }
+
+        public static Lock locked() {
+            Lock lock = new Lock();
+            lock.lock();
+            return lock;
+        }
+
+        public synchronized boolean check() {
+            return locked;
+        }
+
+        public void log() {
+            Log.d(TAG, "access refused, lock being locked, ");
+        }
+
+        public synchronized void release() {
+            if (!locked) {
+                throw new IllegalStateException(TAG + " has been released");
+            } else {
+                if (AutoPagerManager.DEBUG) Log.d(TAG, "lock released");
+                locked = false;
+            }
+        }
+
+        public synchronized void lock() {
+            if (locked) {
+                throw new IllegalStateException(TAG + " has been locked");
+            } else {
+                if (AutoPagerManager.DEBUG) Log.d(TAG, "lock locked");
+                locked = true;
+            }
+        }
     }
 }

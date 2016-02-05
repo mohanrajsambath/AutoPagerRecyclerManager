@@ -25,9 +25,9 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
     /**
      * Next page loading is started when the number of remaining invisible items equals AUTO_PAGER_ZONE_SIZE
      */
-    public static final int AUTO_PAGER_ZONE_SIZE = 3;
-    private static final String TAG = "AutoPagerManager";
-    public static boolean DEBUG = false;
+    static int AUTO_PAGER_ZONE_SIZE = 3;
+    static boolean DEBUG = false;
+    private final String TAG = "AutoPagerManager#" + this.hashCode();
     /**
      * A flag whether next page loading has been started
      */
@@ -63,7 +63,6 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
     private List<OnDataAttachedListener> mOnDataAttachedListeners = new ArrayList<>();
     private LoadPageMethod mLoadPageMethod;
     private EndViewManager mEndViewManager;
-
     /**
      * The constructor.
      *
@@ -76,6 +75,17 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
         mHandler = new Handler(Looper.getMainLooper());
         mLayoutManager = ((LinearLayoutManager) mRecyclerView.getLayoutManager());
         mLoadPageMethod = loadPageMethod;
+    }
+
+    public static void enalbleDebug(boolean debug) {
+        AutoPagerManager.DEBUG = debug;
+    }
+
+    public static void setAutoPagerZoneSize(int autoPagerZoneSize) {
+        if (autoPagerZoneSize <= 0) {
+            throw new IllegalArgumentException();
+        }
+        AUTO_PAGER_ZONE_SIZE = autoPagerZoneSize;
     }
 
     public AutoPagerAdapter<P, E> getAdapter() {
@@ -106,7 +116,7 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
     @Override
     public void onClickEnding(View view) {
 //        getRecyclerView().scrollToPosition(0);
-        Log.d(TAG, "onClickEnding() called " + "reloading the last page");
+        if (DEBUG) Log.d(TAG, "onClickEnding() called " + "reloading the last page");
         if (mEndViewManager == null) {
             View refresh = view.findViewById(R.id.ll_end);
             mEndViewManager = new EndViewManager(refresh);
@@ -148,19 +158,19 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
                 }
             }
             mLastPageIndex = last.last();
-        }
-        mAdapter.setInLastPage(inLastPage());
-        mAdapter.setItems(pages);
-        if (mEndViewManager != null) {
-            mEndViewManager.stopAnimator();
-        }
-        // check if scroll has been enabled
-        if (mOnScrollListener != null) {
-            // if enabled, just change the flag
-            mPagerTriggered = false;
-        } else {
-            // if not, load more data until screen is filled
-            loadMoreToFillScreen();
+            mAdapter.setInLastPage(inLastPage());
+            mAdapter.setItems(pages);
+            if (mEndViewManager != null) {
+                mEndViewManager.stopAnimator();
+            }
+            // check if scroll has been enabled
+            if (mOnScrollListener != null) { // FIXME: 2/5/2016 it's null after vp destroyed the frag
+                // if enabled, just change the flag
+                mPagerTriggered = false;
+            } else {
+                // if not, load more data until screen is filled
+                checkIsScreenFilled();
+            }
         }
     }
 
@@ -168,11 +178,12 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
      * Called when the list items are not enough to fill the screen.
      * The task must be posted to the message queue of UI thread to avoid a recursive invoking.
      */
-    private void loadMoreToFillScreen() {
-        if (DEBUG) Log.d(TAG, "loadMoreToFillScreen() called with " + "");
-        mHandler.post(new Runnable() {
+    private void checkIsScreenFilled() {
+        if (DEBUG) Log.d(TAG, "checkIsScreenFilled() called");
+        Runnable runnable = new Runnable() {
             @Override
             public void run() {
+                if (DEBUG) Log.d(TAG, "execute runnable#" + hashCode());
                 // check if items have filled the screen height, if not, continue loading
                 int visibleItemCount = mLayoutManager.getChildCount();
                 int totalItemCount = mLayoutManager.getItemCount();
@@ -183,17 +194,16 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
                     // if data have filled screen, enable scrolling features
                     mOnScrollListener = new AutoPagerOnScrollListener();
                     mRecyclerView.addOnScrollListener(mOnScrollListener);
-                    return;
+                } else {
+                    if (!inLastPage()) {
+                        // if there are still data that could be loaded to fill the screen, go on loading
+                        loadPage(mIndex + 1);
+                    }
                 }
-
-                if (inLastPage()) {
-                    // if all data have been loaded, return
-                    return;
-                }
-                // if there are still data that could be loaded to fill the screen, go on loading
-                loadPage(mIndex + 1);
             }
-        });
+        };
+        if (DEBUG) Log.d(TAG, "enqueue runnable#" + runnable.hashCode());
+        mHandler.post(runnable);
     }
 
     /**
@@ -260,7 +270,7 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
         public int duration;
 
         public EndViewManager(View view) {
-            if (DEBUG) Log.d(TAG, "EndViewDelegate() called with " + "view = [" + view.getId() + "]");
+//            if (DEBUG) Log.d(TAG, "EndViewDelegate() called with " + "view = [" + view.getId() + "]");
             this.refresh = view.findViewById(R.id.iv_end_refresh);
             this.text = (TextView) view.findViewById(R.id.tv_end);
             this.duration = view.getResources().getInteger(android.R.integer.config_mediumAnimTime);
