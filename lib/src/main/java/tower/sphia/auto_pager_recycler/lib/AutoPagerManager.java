@@ -63,6 +63,7 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
     private List<OnDataAttachedListener> mOnDataAttachedListeners = new ArrayList<>();
     private LoadPageMethod mLoadPageMethod;
     private EndViewManager mEndViewManager;
+
     /**
      * The constructor.
      *
@@ -109,7 +110,7 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
     @Override
     public void onClickLoadMore(View view) {
         int childLayoutPosition = getRecyclerView().getChildLayoutPosition(view);
-        int page = mAdapter.getLoadMorePositionPageMap().get(childLayoutPosition);
+        int page = mAdapter.getDivider(childLayoutPosition).getLastPage();
         loadPage(page);
     }
 
@@ -131,7 +132,7 @@ public class AutoPagerManager<P extends Page<E>, E> implements AutoPagerAdapter.
 
     public E findItemByView(View view) {
         int childLayoutPosition = getRecyclerView().getChildLayoutPosition(view);
-        return getAdapter().getItemWithOffset(childLayoutPosition);
+        return getAdapter().getItem(childLayoutPosition);
     }
 
     public void setLoadPageMethod(LoadPageMethod loadPageMethod) {

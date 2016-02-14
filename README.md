@@ -63,7 +63,7 @@ It's very easy to use `AutoPagerFragment` or a refreshable version `AutoPagerRef
 		
 		    @Override
 		    protected void onBindItemViewHolder(RecyclerView.ViewHolder viewHolder, int position) {
-		        ((ItemViewHolder) viewHolder).mTextView.setText(getItemWithOffset(position));
+		        ((ItemViewHolder) viewHolder).mTextView.setText(getItem(position));
 		    }
 		}
 

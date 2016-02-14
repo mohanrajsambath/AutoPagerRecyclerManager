@@ -17,7 +17,7 @@ public abstract class AutoPagerLoader<P extends Page<?>> extends AsyncTaskLoader
     /**
      * tell the loader to target page to load
      * the loaded target page will be stored in the {@link TreeMap} container
-     * <p/>
+     * <p>
      * NOTE: the default index of first page is 1, if your page begins with 0, just make a offset in {@link #newPage(int)}
      */
     private int mTargetPage = 1;

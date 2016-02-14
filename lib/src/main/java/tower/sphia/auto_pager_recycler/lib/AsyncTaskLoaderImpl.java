@@ -9,6 +9,7 @@ import android.support.v4.content.AsyncTaskLoader;
 public abstract class AsyncTaskLoaderImpl<D> extends AsyncTaskLoader<D> {
     // We hold a reference to the Loader’s data here.
     private D mData;
+
     public AsyncTaskLoaderImpl(Context ctx) {
         // Loaders may be used across multiple Activitys (assuming they aren't
         // bound to the LoaderManager), so NEVER hold a reference to the context
@@ -22,16 +23,6 @@ public abstract class AsyncTaskLoaderImpl<D> extends AsyncTaskLoader<D> {
         return mData;
     }
 
-
-    /****************************************************/
-    /** (1) A task that performs the asynchronous load **/
-    /****************************************************/
-
-
-
-
-    /********************************************************/
-    /** (2) Deliver the results to the registered listener **/
     /********************************************************/
 
     @Override
@@ -59,8 +50,15 @@ public abstract class AsyncTaskLoaderImpl<D> extends AsyncTaskLoader<D> {
         }
     }
 
-    /*********************************************************/
-    /** (3) Implement the Loader’s state-dependent behavior **/
+
+    /****************************************************/
+    /** (1) A task that performs the asynchronous load **/
+    /****************************************************/
+
+
+    /********************************************************/
+    /** (2) Deliver the results to the registered listener **/
+
     /*********************************************************/
 
     @Override
@@ -75,7 +73,7 @@ public abstract class AsyncTaskLoaderImpl<D> extends AsyncTaskLoader<D> {
             mObserver = new SampleObserver();
             // TODO: register the observer
         }*/
-        registerObserver();
+//        registerObserver();
         if (takeContentChanged() || mData == null) {
             // When the observer detects a change, it should call onContentChanged()
             // on the Loader, which will cause the next call to takeContentChanged()
@@ -85,9 +83,10 @@ public abstract class AsyncTaskLoaderImpl<D> extends AsyncTaskLoader<D> {
         }
     }
 
-    protected void registerObserver() {
-
-    }
+    /*********************************************************/
+    /**
+     * (3) Implement the Loader’s state-dependent behavior
+     **/
 
     @Override
     protected void onStopLoading() {
@@ -112,8 +111,8 @@ public abstract class AsyncTaskLoaderImpl<D> extends AsyncTaskLoader<D> {
         }
 
         // The Loader is being reset, so we should stop monitoring for changes.
-        /*if (mObserver != null) {
-            // TODO: unregister the observer
+/*        if (mObserver != null) {
+             // TODO: unregister the observer
             mObserver = null;
         }*/
     }
@@ -129,9 +128,10 @@ public abstract class AsyncTaskLoaderImpl<D> extends AsyncTaskLoader<D> {
     }
 
     abstract protected void releaseResources(D data);
-        // For a simple List, there is nothing to do. For something like a Cursor, we
-        // would close it in this method. All resources associated with the Loader
-        // should be released here.
+
+    // For a simple List, there is nothing to do. For something like a Cursor, we
+    // would close it in this method. All resources associated with the Loader
+    // should be released here.
 
     /*********************************************************************/
     /** (4) Observer which receives notifications when the data changes **/

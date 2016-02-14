@@ -1,5 +1,6 @@
 package tower.sphia.auto_pager_recycler.lib;
 
+import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -17,14 +18,13 @@ import java.util.TreeMap;
  * the ending view and load-more indicators.
  */
 public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-    protected static final int TYPE_ITEM = 1;
-    protected static final int TYPE_FOOTER = 2;
-    protected static final int TYPE_PLACEHOLDER_UP = 3;
-    protected static final int TYPE_END = 4;
+    public static final int ITEM = 1;
+    public static final int DIVIDER = 2;
+    public static final int FOOTER = 3;
+    public static final int END = 4;
     private static final String TAG = "AutoPagerAdapter";
     public static boolean DEBUG = false;
-    private List<E> mItems = new ArrayList<>();
-    private Map<Integer, Integer> mLoadMorePositionPageMap = new TreeMap<>();
+    private List<ItemWrapper<E>> mItems = new ArrayList<>();
     private int mFooterRes;
     private int mEnderRes;
     private int mLoaderRes;
@@ -50,9 +50,6 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
         mCallbacks = callbacks;
     }
 
-    public Map<Integer, Integer> getLoadMorePositionPageMap() {
-        return mLoadMorePositionPageMap;
-    }
 
     public void setFooterRes(int footerRes) {
         mFooterRes = footerRes;
@@ -74,21 +71,26 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
     public void setItems(TreeMap<Integer, P> pages) {
         if (DEBUG) Log.d(TAG, "setItems() called with " + "pages.size() = [" + pages.size() + "]");
         mItems.clear();
-        mLoadMorePositionPageMap.clear();
         int prev = -1;
+
         for (Map.Entry<Integer, P> entry : pages.entrySet()) {
             Page<E> page = entry.getValue();
             int index = page.index();
 
             if (prev != -1) {
                 if (index != prev + 1) {
-                    mLoadMorePositionPageMap.put(mItems.size(), index - 1);
+                    mItems.add(ItemWrapper.<E>newDivider(index - 1));
                 }
             }
             prev = index;
             for (E e : page) {
-                mItems.add(e);
+                mItems.add(ItemWrapper.newItem(e));
             }
+        }
+        if (mInLastPage) {
+            mItems.add(ItemWrapper.<E>newEnd());
+        } else {
+            mItems.add(ItemWrapper.<E>newFooter());
         }
         if (DEBUG) Log.i(TAG, "setItems " + mItems.size());
         notifyDataSetChanged();
@@ -96,42 +98,27 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
 
     @Override
     public int getItemViewType(int position) {
-        int itemCount = getItemCount();
-
-        if (position == itemCount - 1) {
-            if (mItems.size() != 0 && mInLastPage) {
-                return TYPE_END;
-            } else {
-                return TYPE_FOOTER;
-            }
-        } else if (mLoadMorePositionPageMap.containsKey(position)) {
-            return TYPE_PLACEHOLDER_UP;
-        } else {
-            return TYPE_ITEM;
-        }
+        return mItems.get(position).getType();
     }
 
     protected abstract RecyclerView.ViewHolder onCreateItemViewHolder(ViewGroup viewGroup, int viewType);
 
-    private E getItem(int i) {
-        return mItems.get(i);
+    public E getItem(int i) {
+        return mItems.get(i).getItem();
     }
 
-    /**
-     * @param i the position of item in {@link RecyclerView}
-     * @return the index of data, which eliminates special items
-     */
-    protected E getItemWithOffset(int i) {
-        return mItems.get(i - getOffset(i));
+    public ItemDivider getDivider(int i) {
+        return (ItemDivider) mItems.get(i);
     }
+
 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
         if (DEBUG) Log.d("LoadMore", "RecyclerWithFooterAdapter.onCreateViewHolder");
         switch (viewType) {
-            case TYPE_ITEM:
+            case ITEM:
                 return onCreateItemViewHolder(viewGroup, viewType);
-            case TYPE_FOOTER:
+            case FOOTER:
                 View footer = LayoutInflater.from(viewGroup.getContext()).inflate(mFooterRes, viewGroup, false);
                 footer.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -140,7 +127,7 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
                     }
                 });
                 return new FooterViewHolder(footer);
-            case TYPE_END:
+            case END:
                 View ending = LayoutInflater.from(viewGroup.getContext()).inflate(mEnderRes, viewGroup, false);
                 ending.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -149,7 +136,7 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
                     }
                 });
                 return new EndViewHolder(ending);
-            case TYPE_PLACEHOLDER_UP:
+            case DIVIDER:
                 View loadMore = LayoutInflater.from(viewGroup.getContext()).inflate(mLoaderRes, viewGroup, false);
                 loadMore.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -185,20 +172,10 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
         }
     }
 
-    private int getOffset(int position) {
-        int offset = 0;
-        for (Integer placeHolder : mLoadMorePositionPageMap.keySet()) {
-            if (placeHolder >= position) {
-                break;
-            }
-            offset++;
-        }
-        return offset;
-    }
 
     @Override
     public int getItemCount() {
-        return mItems.size() + mLoadMorePositionPageMap.size() + 1;
+        return mItems.size();
     }
 
     public void setInLastPage(boolean inLastPage) {
@@ -241,5 +218,69 @@ public abstract class AutoPagerAdapter<P extends Page<E>, E> extends RecyclerVie
             super(itemView);
             linearLayout = itemView;
         }
+    }
+
+    /**
+     * Created by Voyager on 2/14/2016.
+     */
+
+    static class ItemWrapper<E> {
+        private final E mItem;
+        private final int mType;
+
+        private ItemWrapper(E item) {
+            this.mItem = item;
+            this.mType = ITEM;
+        }
+
+        protected ItemWrapper(int type) {
+            this.mType = type;
+            this.mItem = null;
+        }
+
+        public static <E> ItemDivider<E> newDivider(int lastPage) {
+            return new ItemDivider<>(DIVIDER, lastPage);
+        }
+
+        public static <E> ItemWrapper<E> newEnd() {
+            return new ItemWrapper<>(END);
+        }
+
+        public static <E> ItemWrapper<E> newFooter() {
+            return new ItemWrapper<>(FOOTER);
+        }
+
+        public static <E> ItemWrapper<E> newItem(@NonNull E item) {
+            return new ItemWrapper<>(item);
+        }
+
+        public int getType() {
+            return mType;
+        }
+
+        public E getItem() {
+            if (mItem == null) {
+                throw new NullPointerException("this wrapper doesn't wrap a item");
+            }
+            return mItem;
+        }
+
+    }
+
+    /**
+     * Created by Voyager on 2/14/2016.
+     */
+    static class ItemDivider<E> extends ItemWrapper<E> {
+        private int mLastPage;
+
+        public ItemDivider(int type, int lastPage) {
+            super(type);
+            this.mLastPage = lastPage;
+        }
+
+        public int getLastPage() {
+            return mLastPage;
+        }
+
     }
 }
